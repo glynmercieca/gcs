@@ -12,6 +12,32 @@
       scroll-behavior: smooth;
     }
 
+    /* Hero dots */
+    .hero-dots {
+      position: absolute;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: .5rem;
+      z-index: 5;
+    }
+
+    .hero-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.65);
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .hero-dot.active {
+      background: #0d6efd;
+      box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.12);
+    }
+
     .hero {
       position: relative;
       height: 70vh;
@@ -33,6 +59,7 @@
       opacity: 1;
     }
 
+    /* Per-slide overlays with slide-up animation */
     .hero-overlay {
       position: absolute;
       inset: 0;
@@ -42,6 +69,17 @@
       justify-content: center;
       color: #fff;
       text-align: center;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 600ms cubic-bezier(.2, .9, .2, 1), transform 600ms cubic-bezier(.2, .9, .2, 1);
+      z-index: 3;
+    }
+
+    .hero-overlay.active {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
     }
   </style>
 </head>
@@ -72,9 +110,28 @@
     <img src="./assets/slide1.jpg" class="active" alt="Slide 1">
     <img src="./assets/slide2.jpg" alt="Slide 2">
     <img src="./assets/slide3.jpg" alt="Slide 3">
-    <!-- <div class="hero-overlay">
-      <h1 class="display-5 fw-bold">Frozen Food Distribution Excellence</h1>
-    </div> -->
+    <!-- dot indicators -->
+    <div id="heroDots" class="hero-dots" aria-hidden="false"></div>
+
+    <!-- Per-slide overlays (one per image). They animate up when their slide becomes active -->
+    <div class="hero-overlay active" data-index="0">
+      <div>
+        <h1 class="display-5 fw-bold">Select Quality Products</h1>
+        <p class="lead mb-0">Reliable frozen food distribution across Gozo.</p>
+      </div>
+    </div>
+    <div class="hero-overlay" data-index="1">
+      <div>
+        <h1 class="display-5 fw-bold">Bulk Retail Supply</h1>
+        <p class="lead mb-0">Bulk deliveries and scheduled replenishment for supermarkets.</p>
+      </div>
+    </div>
+    <div class="hero-overlay" data-index="2">
+      <div>
+        <h1 class="display-5 fw-bold">Catering & Events</h1>
+        <p class="lead mb-0">Just-in-time, temperature-controlled deliveries for restaurants and events.</p>
+      </div>
+    </div>
   </div>
 
   <!-- About Us -->
@@ -154,19 +211,28 @@
       </p>
 
       <div class="row g-4">
-        <div class='col-6 col-md-3'>
+        <div class='col-12 col-md-6'>
           <div class='card border-0 shadow-sm'>
-            <i class="bi bi-shop"></i>
             <div class='card-body text-center'>
+              <i class="bi bi-shop fs-3"></i>
               <p class='fw-semibold mb-0'>Retail</p>
+              <p class="text-muted small mt-2 mb-0">
+                We support high-volume retail operations with dedicated cold‑chain
+                logistics bulk order handling. Services include scheduled store replenishment,
+                shelf‑ready packing, flexible delivery windows to supermarkets, convenience stores and wholesale buyers.
+              </p>
             </div>
           </div>
         </div>
-        <div class='col-6 col-md-3'>
+        <div class='col-12 col-md-6'>
           <div class='card border-0 shadow-sm'>
-            <i class="bi bi-fork-knife"></i>
             <div class='card-body text-center'>
+              <i class="bi bi-fork-knife fs-3"></i>
               <p class='fw-semibold mb-0'>Catering</p>
+              <p class="text-muted small mt-2 mb-0">
+                We supply restaurants, hotels and event caterers with flexible, temperature-controlled deliveries
+                tailored to menu planning. Services include small-batch and bulk order fulfilment, urgent/priority dispatch.
+              </p>
             </div>
           </div>
         </div>
@@ -216,14 +282,61 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // Hero slider logic
+    // Hero slider logic with clickable dot indicators
     const slides = document.querySelectorAll('.hero img');
+    const dotsContainer = document.getElementById('heroDots');
+    const overlays = document.querySelectorAll('.hero-overlay');
     let current = 0;
-    setInterval(() => {
+    let intervalId = null;
+
+    function createDots() {
+      slides.forEach((_, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'hero-dot' + (i === 0 ? ' active' : '');
+        btn.setAttribute('aria-label', `Go to slide ${i + 1}`);
+        btn.addEventListener('click', () => {
+          showSlide(i);
+          restartInterval();
+        });
+        dotsContainer.appendChild(btn);
+      });
+    }
+
+    function updateDots() {
+      const dots = dotsContainer.querySelectorAll('.hero-dot');
+      dots.forEach((d, i) => d.classList.toggle('active', i === current));
+    }
+
+    function showSlide(index) {
+      if (index === current) return;
       slides[current].classList.remove('active');
-      current = (current + 1) % slides.length;
+      if (overlays && overlays[current]) overlays[current].classList.remove('active');
+      current = index;
       slides[current].classList.add('active');
-    }, 4000);
+      if (overlays && overlays[current]) overlays[current].classList.add('active');
+      updateDots();
+    }
+
+    function nextSlide() {
+      showSlide((current + 1) % slides.length);
+    }
+
+    function startInterval() {
+      intervalId = setInterval(nextSlide, 5000);
+    }
+
+    function restartInterval() {
+      clearInterval(intervalId);
+      startInterval();
+    }
+
+    // init
+    createDots();
+    // ensure overlays are synced (first overlay visible)
+    if (overlays && overlays.length) {
+      overlays.forEach((ov, i) => ov.classList.toggle('active', i === 0));
+    }
+    startInterval();
 
     // Update footer year
     document.getElementById('year').textContent = new Date().getFullYear();
